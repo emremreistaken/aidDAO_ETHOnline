@@ -3,10 +3,9 @@ pragma solidity ^0.8.4;
 
 import { Base64 } from "./libraries/Base64.sol";
 import "erc721a/contracts/ERC721A.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "https://github.com/UMAprotocol/protocol/blob/master/packages/core/contracts/oracle/interfaces/OptimisticOracleV2Interface.sol";
 
-contract aidDAO is ERC721A, Ownable {
+contract aidDAO is ERC721A {
     mapping(address => uint) public participationsOfAddress;
     mapping(address => uint) public aidedAmountOfAddress;
     mapping(uint256 => Aid) public aidProposals;
@@ -18,31 +17,34 @@ contract aidDAO is ERC721A, Ownable {
         uint proposerBonded;
         mapping(address => uint) aiders;
 
-        string description;
+        bytes descriptionToBeChecked;
         address to;
+        uint requestTime;
 
         bool isNeedReal;
         uint totalFunded;
     }
 
-    uint256 public aidIndex;
+    uint256 public aidAmount;
 
     constructor() ERC721A ("aidDAO NFTs", "AID") {
     }
 
     function createAid(
         address _to,
-        string memory _description
+        bytes memory _description,
+        uint _hoursToFund
     ) external DAOMemberOnly payable {
         require(msg.value > minStakeAmount, "not enough staked");
-        Aid storage aid = aidProposals[aidIndex];
-        aid.deadline = block.timestamp + 1 days;
+        Aid storage aid = aidProposals[aidAmount];
+
         aid.proposerBonded = msg.value;
-
-        aid.description = _description;
+        aid.descriptionToBeChecked = bytes(abi.encodePacked("Statement: ", string(_description), " A: 1 for true, 0 for not true"));
         aid.to = _to;
+        aid.deadline = block.timestamp + _hoursToFund * 3600;
 
-        aidIndex++;
+        requestData(aid.descriptionToBeChecked);
+        aidAmount++;
     }
 
     modifier DAOMemberOnly() {
@@ -50,8 +52,9 @@ contract aidDAO is ERC721A, Ownable {
         _;
     }
 
-    modifier activeAidOnly(uint _aidIndex) {
-        require(
+    modifier acceptedAidOnly(uint _aidIndex) {
+        require(aidProposals[_aidIndex].isNeedReal == true, "aid is not proven");
+        require (
             aidProposals[_aidIndex].deadline > block.timestamp,
             "deadline exceeded"
         );
@@ -62,11 +65,12 @@ contract aidDAO is ERC721A, Ownable {
         external
         payable
         DAOMemberOnly
-        activeAidOnly(aidIndex)
+        acceptedAidOnly(_aidIndex)
     {
         Aid storage aid = aidProposals[_aidIndex];
-        require(msg.value > 0, "you should aid a bit");
+        require(msg.value > 0, "you should make a bit aid");
 
+        // increases participations
         if(aid.aiders[msg.sender] == 0) {
             participationsOfAddress[msg.sender]++;
         }
@@ -78,7 +82,7 @@ contract aidDAO is ERC721A, Ownable {
     modifier executableAidOnly(uint256 _aidIndex) {
         require(
             aidProposals[_aidIndex].deadline <= block.timestamp,
-            "DEADLINE_NOT_EXCEEDED"
+            "deadline is not exceeded"
         );
         require(
             aidProposals[_aidIndex].executed == false,
@@ -149,27 +153,32 @@ contract aidDAO is ERC721A, Ownable {
         if(from != address(0)) revert Soulbound();
     }
 
-    /****** UMA FOR CHECKING PROPOSAL LEGITITY (Polygon Mumbai) 
-    OptimisticOracleV2Interface oo = OptimisticOracleV2Interface("0x313131313131131");
+    // UMA FOR CHECKING PROPOSAL LEGITITY (Goerli ETH) 
+    OptimisticOracleV2Interface oo = OptimisticOracleV2Interface(0xA5B9d8a0B0Fa04Ba71BDD68069661ED5C0848884);
+
     bytes32 identifier = bytes32("YES_OR_NO_QUERY");
-    bytes ancillaryData = bytes("Question here");
-    uint requestTime = 0;
 
-    function requestAnswer() public {
-        requestTime = block.timestamp;
-        IERC20 bondCurrency = IERC20("0x313131313"); // Mumbai WETH
-        uint reward = 0;
+    function requestData(bytes memory _ancillaryData) internal {
+        uint requestTime = block.timestamp; // Set the request time to the current block time.
+        IERC20 bondCurrency = IERC20(0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6); // Use Görli WETH as the bond currency.
+        uint256 reward = 0; // Set the reward to 0 (so we dont have to fund it from this contract).
 
-        oo.requestPrice(identifier, requestTime, ancillaryData, bondCurrency, reward);
-        oo.setCustomLiveness(identifier, requestTime, ancillaryData, 30);
+        // Now, make the price request to the Optimistic oracle and set the liveness to 30 so it will settle quickly.
+        oo.requestPrice(identifier, requestTime, _ancillaryData, bondCurrency, reward);
+        oo.setCustomLiveness(identifier, requestTime, _ancillaryData, 30);
     }
 
-    function settleRequest() public {
-        oo.settle(address(this), identifier, requestTime, ancillaryData);
+    function settleRequest(uint _aidIndex) public {
+        Aid storage aid = aidProposals[_aidIndex];
+        oo.settle(address(this), identifier, aid.requestTime, aid.descriptionToBeChecked);
     }
 
-    function getSettledAnswer() public {
-        return oo.getRequest(address(this), identifier, requestTime, ancillaryData).resolvedPrice;
+    function getSettledData(uint _aidIndex) public returns (int256) {
+        Aid storage aid = aidProposals[_aidIndex];
+        int256 result = oo.getRequest(address(this), identifier, aid.requestTime, aid.descriptionToBeChecked).resolvedPrice;
+        if(result == 1 && aid.isNeedReal == false){
+            aid.isNeedReal = true;
+        }
+        return result;
     }
-    ******/
 }
