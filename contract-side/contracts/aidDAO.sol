@@ -113,7 +113,7 @@ contract aidDAO is ERC721A {
         aid.executed = true;
     }
 
-    /****** DYNAMIC SOULBOUND NFT ******/
+    /******************** DYNAMIC SOULBOUND NFT ********************/
 
     string svg1 = "<svg xmlns='http://www.w3.org/2000/svg' version='1.1' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:svgjs='http://svgjs.dev/svgjs' viewBox='0 0 700 700' width='700' height='700'><defs><linearGradient gradientTransform='rotate(150, 0.5, 0.5)' x1='50%' y1='0%' x2='50%' y2='100%' id='ffflux-gradient'><style>.t{ font: bold 30px sans-serif; fill: black; }.b{ font: bold 45px sans-serif; fill: black; }</style><stop stop-color='hsl(315, 100%, 72%)' stop-opacity='1' offset='0%'></stop><stop stop-color='hsl(227, 100%, 50%)' stop-opacity='1' offset='100%'></stop></linearGradient><filter id='ffflux-filter' x='-20%' y='-20%' width='140%' height='140%' filterUnits='objectBoundingBox' primitiveUnits='userSpaceOnUse' color-interpolation-filters='sRGB'><feTurbulence type='fractalNoise' baseFrequency='0.005 0.003' numOctaves='2' seed='2' stitchTiles='stitch' x='0%' y='0%' width='100%' height='100%' result='turbulence'></feTurbulence><feGaussianBlur stdDeviation='20 0' x='0%' y='0%' width='100%' height='100%' in='turbulence' edgeMode='duplicate' result='blur'></feGaussianBlur><feBlend mode='color-dodge' x='0%' y='0%' width='100%' height='100%' in='SourceGraphic' in2='blur' result='blend'></feBlend></filter></defs><rect width='700' height='700' fill='url(#ffflux-gradient)' filter='url(#ffflux-filter)'></rect><text x='50%' y='25%' class='t' dominant-baseline='middle' text-anchor='middle'>Participated aid amount:</text><text x='50%' y='40%' class='b' dominant-baseline='middle' text-anchor='middle'>";
     string svg2 = "</text><text x='50%' y='60%' class='t' dominant-baseline='middle' text-anchor='middle'>Raised aid amount in $MATIC:</text><text x='50%' y='75%' class='b' dominant-baseline='middle' text-anchor='middle'>";
@@ -157,7 +157,8 @@ contract aidDAO is ERC721A {
         if(from != address(0)) revert Soulbound(); // Transfers are not allowed except minting
     }
 
-    // aidDAO UMA's OO implementation to check proposal legidity (Polygon Mumbai)
+    /************ aidDAO UMA's OO implementation to check proposal legidity (Polygon Mumbai) ************/
+
     OptimisticOracleInterface oo = OptimisticOracleInterface(0xAB75727d4e89A7f7F04f57C00234a35950527115);
 
     bytes32 identifier = bytes32("YES_OR_NO_QUERY");
@@ -204,7 +205,8 @@ contract aidDAO is ERC721A {
         return result;
     }
 
-    // aidDAO EPNS Push Notifications Implementation
+    /*************** aidDAO EPNS Push Notifications Implementation ***************/
+
     address EPNS_COMM_ADDRESS = 0xb3971BCef2D791bc4027BbfedFb47319A4AAaaAa;
 
     function notifyDAO(uint _aidIndex, bytes memory _description) internal {
