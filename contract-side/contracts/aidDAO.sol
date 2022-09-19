@@ -52,7 +52,7 @@ contract aidDAO is ERC721A {
 
         aid.proposerBonded = msg.value;
         aid.description = _description;
-        aid.OOquestion = bytes(abi.encodePacked("Is the following statement considered as an urgent emergency. : ", string(_description), " A: 1 for true, 0 for not true"));
+        aid.OOquestion = bytes(abi.encodePacked("For aidDAO, is the following statement an urgent emergency?: ", string(_description), " A: 1 for true, 0 for not true"));
         aid.to = _to;
         aid.deadline = block.timestamp + _hoursToFund * 3600;
 
