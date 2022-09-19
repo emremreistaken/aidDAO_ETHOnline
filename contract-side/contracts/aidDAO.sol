@@ -14,15 +14,18 @@ contract aidDAO is ERC721A {
     mapping(address => uint) public participationsOfAddress;
     mapping(address => uint) public aidedAmountOfAddress;
     mapping(uint256 => Aid) public aidProposals;
-    uint minStakeAmount = 0.01 ether;
+
+    uint minBondAmount = 0.01 ether;
 
     struct Aid {
         uint deadline;
         bool executed;
         uint proposerBonded;
-        mapping(address => uint) aiders;
 
-        bytes descriptionToBeChecked;
+        mapping(address => uint) aiders;
+        
+        bytes description;
+        bytes OOquestion;
         address to;
         uint requestTime;
 
@@ -44,15 +47,16 @@ contract aidDAO is ERC721A {
         bytes memory _description,
         uint _hoursToFund
     ) external DAOMemberOnly payable {
-        require(msg.value > minStakeAmount, "not enough staked");
+        require(msg.value > minBondAmount, "not enough bonded");
         Aid storage aid = aidProposals[aidCounter];
 
         aid.proposerBonded = msg.value;
-        aid.descriptionToBeChecked = bytes(abi.encodePacked("Statement: ", string(_description), " A: 1 for true, 0 for not true"));
+        aid.description = _description;
+        aid.OOquestion = bytes(abi.encodePacked("Is the following statement considered as an urgent emergency. : ", string(_description), " A: 1 for true, 0 for not true"));
         aid.to = _to;
         aid.deadline = block.timestamp + _hoursToFund * 3600;
 
-        requestData(aid.descriptionToBeChecked);
+        requestData(aid.OOquestion);
         aidCounter++;
     }
 
@@ -178,7 +182,7 @@ contract aidDAO is ERC721A {
         /*
         We would use the line of code below to settle wanted request, if UMA's Optimistic Oracle V2 was deployed on Polygon Mumbai.
 
-            oo.settle(address(this), identifier, aid.requestTime, aid.descriptionToBeChecked);
+            oo.settle(address(this), identifier, aid.requestTime, aid.OOquestion);
         
         :(
         */
@@ -190,7 +194,7 @@ contract aidDAO is ERC721A {
             /* 
             We supposed to get the settled result from the OOV2 as below:
 
-               int256 result = oo.getRequest(address(this), identifier, aid.requestTime, aid.descriptionToBeChecked).resolvedPrice;
+               int256 result = oo.getRequest(address(this), identifier, aid.requestTime, aid.OOquestion).resolvedPrice;
 
             But unfortunately, UMA's Optimistic Oracle V2 is not currently deployed on Polygon Mumbai.
             So we pretend as we got the result equal to 1.
@@ -199,7 +203,7 @@ contract aidDAO is ERC721A {
         
         if(result == 1 && aid.isNeedReal == false){
             aid.isNeedReal = true;
-            notifyDAO(_aidIndex, aid.descriptionToBeChecked); 
+            notifyDAO(_aidIndex, aid.description);
         }
 
         return result;
