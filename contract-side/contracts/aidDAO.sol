@@ -135,7 +135,7 @@ contract aidDAO is ERC721A {
                     abi.encodePacked(
                         '{"name": "aidDao Member #',
                         _toString(tokenId),
-                        '", "description": "A public goods DAO which aims to raise funds to people in need", "image": "data:image/svg+xml;base64,',
+                        '", "description": "aidDAO aims to raise funds to people in emergency/urgent need. This NFT represents proof of membership.", "image": "data:image/svg+xml;base64,',
                         Base64.encode(bytes(finalSvg)),
                         '"}'
                     )
