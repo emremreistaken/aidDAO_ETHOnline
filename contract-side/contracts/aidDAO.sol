@@ -4,13 +4,14 @@ pragma solidity ^0.8.4;
 import { Base64 } from "./libraries/Base64.sol";
 import "erc721a/contracts/ERC721A.sol";
 import "./OptimisticOracleInterface.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 // EPNS PUSH Comm Contract Interface
 interface IPUSHCommInterface {
     function sendNotification(address _channel, address _recipient, bytes calldata _identity) external;
 }
 
-contract aidDAO is ERC721A {
+contract aidDAO is ERC721A, Ownable {
     mapping(address => uint) public addressParticipated;
     mapping(address => uint) public addressFunded;
     mapping(uint256 => Aid) public aidProposals;
@@ -20,11 +21,9 @@ contract aidDAO is ERC721A {
     struct Aid {
         uint deadline;
         bool executed;
-        uint proposerBonded;
-
         mapping(address => uint) aiders;
-        
-        bytes description;
+
+        string description;
         bytes OOquestion;
         address to;
         uint requestTime;
@@ -36,6 +35,8 @@ contract aidDAO is ERC721A {
     uint256 public aidCounter;
 
     constructor() ERC721A ("aidDAO Membership", "AID") {}
+    receive() external payable {}
+    fallback() external payable {}
 
     function joinDAO() external payable {
         require(balanceOf(msg.sender) == 0, "you are already a member");
@@ -44,17 +45,15 @@ contract aidDAO is ERC721A {
 
     function createAid(
         address _to,
-        bytes memory _description,
+        string memory _description,
         uint _hoursToFund
-    ) external DAOMemberOnly payable {
-        require(msg.value > minBondAmount, "not enough bonded");
+    ) external payable DAOMemberOnly {
         Aid storage aid = aidProposals[aidCounter];
 
-        aid.proposerBonded = msg.value;
         aid.description = _description;
-        aid.OOquestion = bytes(abi.encodePacked("For aidDAO, is the following statement an urgent emergency?: ", string(_description), " A: 1 for true, 0 for not true"));
+        aid.OOquestion = bytes(abi.encodePacked("For aidDAO, is the following statement an urgent emergency?: ", _description, " A: 1 for true, 0 for not true"));
         aid.to = _to;
-        aid.deadline = block.timestamp + _hoursToFund * 3600;
+        aid.deadline = block.timestamp + _hoursToFund * 60; // should be " * 3600" at the end, but lowered for testing purposes
 
         requestData(aid.OOquestion);
         aidCounter++;
@@ -111,7 +110,7 @@ contract aidDAO is ERC721A {
         executableAidOnly(_aidIndex)
     {
         Aid storage aid = aidProposals[_aidIndex];
-        (bool success, ) = address(payable(aid.to)).call{value : aid.totalFunded + aid.proposerBonded}("");
+        (bool success, ) = address(payable(aid.to)).call{value : aid.totalFunded}("");
         require(success,"transfer failed");
         
         aid.executed = true;
@@ -120,8 +119,8 @@ contract aidDAO is ERC721A {
     /******************** DYNAMIC SOULBOUND NFT ********************/
 
     string svg1 = "<svg xmlns='http://www.w3.org/2000/svg' version='1.1' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:svgjs='http://svgjs.dev/svgjs' viewBox='0 0 700 700' width='700' height='700'><defs><linearGradient gradientTransform='rotate(150, 0.5, 0.5)' x1='50%' y1='0%' x2='50%' y2='100%' id='ffflux-gradient'><style>.t{ font: bold 30px sans-serif; fill: black; }.b{ font: bold 50px sans-serif; fill: black; }.f{ font: bold 50px monospace; fill: black; }</style><stop stop-color='hsl(315, 100%, 72%)' stop-opacity='1' offset='0%'></stop><stop stop-color='hsl(227, 100%, 50%)' stop-opacity='1' offset='100%'></stop></linearGradient><filter id='ffflux-filter' x='-20%' y='-20%' width='140%' height='140%' filterUnits='objectBoundingBox' primitiveUnits='userSpaceOnUse' color-interpolation-filters='sRGB'><feTurbulence type='fractalNoise' baseFrequency='0.005 0.003' numOctaves='2' seed='2' stitchTiles='stitch' x='0%' y='0%' width='100%' height='100%' result='turbulence'></feTurbulence><feGaussianBlur stdDeviation='20 0' x='0%' y='0%' width='100%' height='100%' in='turbulence' edgeMode='duplicate' result='blur'></feGaussianBlur><feBlend mode='color-dodge' x='0%' y='0%' width='100%' height='100%' in='SourceGraphic' in2='blur' result='blend'></feBlend></filter></defs><rect width='700' height='700' fill='url(#ffflux-gradient)' filter='url(#ffflux-filter)'></rect><text x='50%' y='25%' class='t' dominant-baseline='middle' text-anchor='middle'>Participated aid amount:</text><text x='50%' y='35%' class='b' dominant-baseline='middle' text-anchor='middle'>";
-    string svg2 = "</text><text x='50%' y='60%' class='t' dominant-baseline='middle' text-anchor='middle'>Raised aid amount in $MATIC:</text><text x='270' y='70%' class='b' dominant-baseline='middle'>";
-    string svg3 = "</text><text x='456' y='95%' class='f' dominant-baseline='middle'>aidDAO&#127384;";
+    string svg2 = "</text><text x='50%' y='60%' class='t' dominant-baseline='middle' text-anchor='middle'>Raised aid amount in $MATIC:</text><text x='50%' y='70%' class='b' dominant-baseline='middle'>";
+    string svg3 = "</text><text x='456' y='95%' class='f' dominant-baseline='middle'>aidDAO&#127384;</text></svg>";
 
     function tokenURI(uint tokenId) public view virtual override returns(string memory) {
         uint participated = addressParticipated[ownerOf(tokenId)];
@@ -173,11 +172,16 @@ contract aidDAO is ERC721A {
         uint256 reward = 0; // Set the reward to 0 (so we dont have to fund it from this contract).
 
         // Now, make the price request to the Optimistic oracle and set the liveness to 30 so it will settle quickly.
-        oo.requestPrice(identifier, requestTime, _ancillaryData, bondCurrency, reward);
-        oo.setCustomLiveness(identifier, requestTime, _ancillaryData, 30);
+        /*
+        We would use the lines of code below to send request, if UMA's Optimistic Oracle V2 was deployed on Polygon Mumbai.
+
+            oo.requestPrice(identifier, requestTime, _ancillaryData, bondCurrency, reward);
+            oo.setCustomLiveness(identifier, requestTime, _ancillaryData, 30);
+
+        */
     }
 
-    function settleRequest(uint _aidIndex) public {
+    function settleRequest(uint _aidIndex) public DAOMemberOnly {
         Aid storage aid = aidProposals[_aidIndex];
         /*
         We would use the line of code below to settle wanted request, if UMA's Optimistic Oracle V2 was deployed on Polygon Mumbai.
@@ -188,7 +192,7 @@ contract aidDAO is ERC721A {
         */
     }
 
-    function getSettledData(uint _aidIndex) public returns (int256) {
+    function getSettledData(uint _aidIndex) public DAOMemberOnly returns (int256) {
         Aid storage aid = aidProposals[_aidIndex];
         int256 result = 1;
             /* 
@@ -213,9 +217,9 @@ contract aidDAO is ERC721A {
 
     address EPNS_COMM_ADDRESS = 0xb3971BCef2D791bc4027BbfedFb47319A4AAaaAa;
 
-    function notifyDAO(uint _aidIndex, bytes memory _description) internal {
+    function notifyDAO(uint _aidIndex, string memory _description) internal {
         IPUSHCommInterface(EPNS_COMM_ADDRESS).sendNotification(
-            0x050Ca75E3957c37dDF26D58046d8F9967B88190c, // from channel
+            0x48008aA5B9CA70EeFe7d1348bB2b7C3094426AA6, // from channel
             address(this), // to recipient, put address(this) in case you want Broadcast or Subset. For Targetted put the address to which you want to send
             bytes(
                 string(
@@ -228,7 +232,7 @@ contract aidDAO is ERC721A {
                         "aidDAO New Aid Alert! - Aid #",
                         _toString(_aidIndex),
                         "+", // segregator
-                        string(_description),
+                        _description,
                         ". Please don't leave it without support, and make your humble donation to 'Aid #",
                         _toString(_aidIndex),
                         "'. <3"
