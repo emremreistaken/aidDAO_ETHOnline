@@ -15,8 +15,6 @@ contract aidDAO is ERC721A {
     mapping(address => uint) public addressFunded;
     mapping(uint256 => Aid) public aidProposals;
 
-    uint minBondAmount = 0.01 ether;
-
     struct Aid {
         uint deadline;
         bool executed;
