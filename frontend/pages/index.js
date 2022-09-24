@@ -256,7 +256,10 @@ export default function Home() {
 					<br />
 					<br />
 					Welcome to the aidDAO! <br />
-					You can become a aidDAO Member by minting a cool Dynamic Soulbound NFT! <br />
+					<br />
+					You can become a member by minting "aidDAO Membership NFT"
+					<br />
+					which is a cool Dynamic Soulbound NFT!<br />
 					<button className={styles.button2} onClick={joinDAO}>
 						Become a member
 					</button>
@@ -376,7 +379,7 @@ export default function Home() {
 					<div className={styles.description}>Aid Proposals Created So Far: {aidCounter}</div>
 					<div className={styles.flex}>
 						<button className={styles.button} onClick={() => setSelectedTab('Join aidDAO')}>
-							Join DAO
+							Join aidDAO
 						</button>
 						<button className={styles.button} onClick={() => setSelectedTab('Create Proposal')}>
 							Create Aid Proposal
