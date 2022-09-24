@@ -4,14 +4,13 @@ pragma solidity ^0.8.4;
 import { Base64 } from "./libraries/Base64.sol";
 import "erc721a/contracts/ERC721A.sol";
 import "./OptimisticOracleInterface.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 // EPNS PUSH Comm Contract Interface
 interface IPUSHCommInterface {
     function sendNotification(address _channel, address _recipient, bytes calldata _identity) external;
 }
 
-contract aidDAO is ERC721A, Ownable {
+contract aidDAO is ERC721A {
     mapping(address => uint) public addressParticipated;
     mapping(address => uint) public addressFunded;
     mapping(uint256 => Aid) public aidProposals;
