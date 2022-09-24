@@ -10,8 +10,6 @@ export default function Home() {
 	const [ aidCounter, setAidCounter ] = useState('0');
 	// Array of all proposals created in the DAO
 	const [ proposals, setProposals ] = useState([]);
-	// User's balance of CryptoDevs NFTs
-	const [ isMember, setMember ] = useState('0');
 	// One of "Create Proposal" or "View Proposals"
 	const [ selectedTab, setSelectedTab ] = useState('');
 	// True if waiting for a transaction to be mined, false otherwise.
@@ -49,7 +47,7 @@ export default function Home() {
 		}
 	};
 
-	// Reads the number of proposals in the DAO contract and sets the `numProposals` state variable
+	// Reads the number of proposals in the aidDAO contract and sets the `aidCounter` state variable
 	const getNumProposalsInDAO = async () => {
 		try {
 			const provider = await getProviderOrSigner();
@@ -61,19 +59,7 @@ export default function Home() {
 		}
 	};
 
-	// Reads the balance of the user's CryptoDevs NFTs and sets the `nftBalance` state variable
-	const checkIfMember = async () => {
-		try {
-			const signer = await getProviderOrSigner(true);
-			const daoContract = getDAOContractInstance(signer);
-			const balance = await daoContract.balanceOf(signer.getAddress());
-			setMember(parseInt(balance.toString()));
-		} catch (error) {
-			console.error(error);
-		}
-	};
-
-	// Calls the `createProposal` function in the contract, using the tokenId from `fakeNftTokenId`
+	// Calls the `createAid` function in the contract
 	const createProposal = async () => {
 		try {
 			const signer = await getProviderOrSigner(true);
@@ -89,7 +75,7 @@ export default function Home() {
 		}
 	};
 
-	// Calls the `createProposal` function in the contract, using the tokenId from `fakeNftTokenId`
+	// Calls the `joinToAid` function in the contract
 	const makeAid = async (id, amount) => {
 		try {
 			const signer = await getProviderOrSigner(true);
@@ -104,6 +90,7 @@ export default function Home() {
 		}
 	};
 
+	// Calls the `joinDAO` function in the contract
 	const joinDAO = async () => {
 		try {
 			const signer = await getProviderOrSigner(true);
@@ -118,7 +105,7 @@ export default function Home() {
 		}
 	};
 
-	// Helper function to fetch and parse one proposal from the DAO contract
+	// Helper function to fetch and parse one proposal from the aidDAO contract
 	// Given the Proposal ID
 	// and converts the returned data into a Javascript object with values we can use
 	const fetchProposalById = async (id) => {
@@ -141,8 +128,7 @@ export default function Home() {
 		}
 	};
 
-	// Runs a loop `numProposals` times to fetch all proposals in the DAO
-	// and sets the `proposals` state variable
+	// Runs a loop `aidCounter` times to fetch all active proposals in the DAO
 	const fetchActiveProposals = async () => {
 		try {
 			const proposals = [];
@@ -203,7 +189,7 @@ export default function Home() {
 	// so when a wallet connects or disconnects
 	// Prompts user to connect wallet if not connected
 	// and then calls helper functions to fetch the
-	// DAO Treasury Balance, User NFT Balance, and Number of Proposals in the DAO
+	// Number of Proposals in the aidDAO
 	useEffect(
 		() => {
 			if (!walletConnected) {
@@ -241,23 +227,24 @@ export default function Home() {
 			return renderCreateProposalTab();
 		} else if (selectedTab === 'View Proposals') {
 			return renderViewProposalsTab();
-		} else if (selectedTab === 'Join aidDAO') {
+		} else if (selectedTab === 'Join to aidDAO') {
 			return renderJoinDAOTab();
 		}
 		return null;
 	}
 
+	// Renders the 'Join to aidDAO' tab content
 	function renderJoinDAOTab() {
 		if (loading) {
 			return <div className={styles.description}>Loading... Waiting for transaction...</div>;
 		} else {
 			return (
 				<div className={styles.description}>
-					Welcome to the aidDAO! <br />
-					<br />
 					You can become a member by minting "aidDAO Membership NFT"
 					<br />
 					which is a cool Dynamic Soulbound NFT!<br />
+					<br />
+					Thanks for caring. <br />
 					<button className={styles.button2} onClick={joinDAO}>
 						Become a member
 					</button>
@@ -376,8 +363,8 @@ export default function Home() {
 					<div className={styles.description}>Active Aids: {activeCount}</div>
 					<div className={styles.description}>Aid Proposals Created So Far: {aidCounter}</div>
 					<div className={styles.flex}>
-						<button className={styles.button} onClick={() => setSelectedTab('Join aidDAO')}>
-							Join aidDAO
+						<button className={styles.button} onClick={() => setSelectedTab('Join to aidDAO')}>
+							Join to aidDAO
 						</button>
 						<button className={styles.button} onClick={() => setSelectedTab('Create Proposal')}>
 							Create Aid Proposal
