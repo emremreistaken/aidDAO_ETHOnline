@@ -161,18 +161,17 @@ export default function Home() {
 
 	// Calls the `executeProposal` function in the contract, using
 	// the passed proposal ID
-	const executeProposal = async (proposalId) => {
+	const executeProposal = async (id) => {
 		try {
 			const signer = await getProviderOrSigner(true);
 			const daoContract = getDaoContractInstance(signer);
-			const txn = await daoContract.sendAid(aidId);
+			const txn = await daoContract.sendAid(id);
 			setLoading(true);
 			await txn.wait();
 			setLoading(false);
 			await fetchAllProposals();
 		} catch (error) {
 			console.error(error);
-			window.alert(error.data.message);
 		}
 	};
 
@@ -325,7 +324,7 @@ export default function Home() {
 							<p>Executed?: {p.executed.toString()}</p>
 							{p.deadline.getTime() > Date.now() && !p.executed ? (
 								<div className={styles.flex}>
-									<label>Make Aid: </label>
+									<label>Amount to donate: </label>
 									<input
 										placeholder="Aid Amount in $MATIC"
 										type="number"
@@ -396,7 +395,12 @@ export default function Home() {
 				</div>
 			</div>
 
-			<footer className={styles.footer}>Made with &#10084; by aidDAO, at ETHOnline 2022</footer>
+			<footer className={styles.footer}>
+				Made with &#10084; by
+				<a href="https://twitter.com/0xemremre" target="_blank">
+					@0xemremre
+				</a>, at ETHOnline 2022.
+			</footer>
 		</div>
 	);
 }
