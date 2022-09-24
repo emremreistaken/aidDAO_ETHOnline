@@ -14,7 +14,7 @@ export default function Home() {
 	// Array of all proposals created in the DAO
 	const [ proposals, setProposals ] = useState([]);
 	// User's balance of CryptoDevs NFTs
-	const [ nftBalance, setNftBalance ] = useState(0);
+	const [ isMember, setMember ] = useState('0');
 	// Fake NFT Token ID to purchase. Used when creating a proposal.
 	const [ fakeNftTokenId, setFakeNftTokenId ] = useState('');
 	// One of "Create Proposal" or "View Proposals"
@@ -22,6 +22,12 @@ export default function Home() {
 	// True if waiting for a transaction to be mined, false otherwise.
 	const [ loading, setLoading ] = useState(false);
 	// True if user has connected their wallet, false otherwise
+	const [ description, setDescription ] = useState('');
+	const [ proof, setProof ] = useState('');
+	const [ to, setTo ] = useState('');
+	const [ htf, setHtf ] = useState('0');
+	const [ indexToFund, setIndexToFund ] = useState('0');
+
 	const [ walletConnected, setWalletConnected ] = useState(false);
 	const web3ModalRef = useRef();
 
@@ -59,12 +65,12 @@ export default function Home() {
 	};
 
 	// Reads the balance of the user's CryptoDevs NFTs and sets the `nftBalance` state variable
-	const getUserNFTBalance = async () => {
+	const checkIfMember = async () => {
 		try {
 			const signer = await getProviderOrSigner(true);
-			const nftContract = getCryptodevsNFTContractInstance(signer);
-			const balance = await nftContract.balanceOf(signer.getAddress());
-			setNftBalance(parseInt(balance.toString()));
+			const daoContract = getDAOContractInstance(signer);
+			const balance = await daoContract.balanceOf(signer.getAddress());
+			setMember(parseInt(balance.toString()));
 		} catch (error) {
 			console.error(error);
 		}
@@ -75,7 +81,23 @@ export default function Home() {
 		try {
 			const signer = await getProviderOrSigner(true);
 			const daoContract = getDaoContractInstance(signer);
-			const txn = await daoContract.createProposal(fakeNftTokenId);
+			const txn = await daoContract.createProposal(to, description, proof, htf);
+			setLoading(true);
+			await txn.wait();
+			await getNumProposalsInDAO();
+			setLoading(false);
+		} catch (error) {
+			console.error(error);
+			window.alert(error.data.message);
+		}
+	};
+
+	// Calls the `createProposal` function in the contract, using the tokenId from `fakeNftTokenId`
+	const makeAid = async () => {
+		try {
+			const signer = await getProviderOrSigner(true);
+			const daoContract = getDaoContractInstance(signer);
+			const txn = await daoContract.joinToAid(indexToFund);
 			setLoading(true);
 			await txn.wait();
 			await getNumProposalsInDAO();
@@ -96,10 +118,9 @@ export default function Home() {
 			const proposal = await daoContract.proposals(id);
 			const parsedProposal = {
 				proposalId: id,
-				nftTokenId: proposal.nftTokenId.toString(),
+				aidDesription: proposal.description,
 				deadline: new Date(parseInt(proposal.deadline.toString()) * 1000),
-				yayVotes: proposal.yayVotes.toString(),
-				nayVotes: proposal.nayVotes.toString(),
+				to: proposal.to.toString(),
 				executed: proposal.executed
 			};
 			return parsedProposal;
@@ -166,9 +187,9 @@ export default function Home() {
 		const web3Provider = new providers.Web3Provider(provider);
 
 		const { chainId } = await web3Provider.getNetwork();
-		if (chainId !== 4) {
-			window.alert('Please switch to the Rinkeby network!');
-			throw new Error('Please switch to the Rinkeby network');
+		if (chainId !== 80001) {
+			window.alert('Please switch to the Polygon Mumbai network!');
+			throw new Error('Please switch to the Polygon Mumbai network');
 		}
 
 		if (needSigner) {
@@ -200,7 +221,6 @@ export default function Home() {
 
 				connectWallet().then(() => {
 					getDAOTreasuryBalance();
-					getUserNFTBalance();
 					getNumProposalsInDAO();
 				});
 			}
@@ -234,7 +254,7 @@ export default function Home() {
 	function renderCreateProposalTab() {
 		if (loading) {
 			return <div className={styles.description}>Loading... Waiting for transaction...</div>;
-		} else if (nftBalance === 0) {
+		} else if (isMember === 0) {
 			return (
 				<div className={styles.description}>
 					You are not a aidDAO member <br />
@@ -244,8 +264,18 @@ export default function Home() {
 		} else {
 			return (
 				<div className={styles.container}>
-					<label>Fake NFT Token ID to Purchase: </label>
-					<input placeholder="0" type="number" onChange={(e) => setFakeNftTokenId(e.target.value)} />
+					<label>Aid Description: </label>
+					<input placeholder="Description" type="string" onChange={(e) => setDescription(e.target.value)} />
+					<br />
+					<label>Proof for Description: </label>
+					<input placeholder="Proof" type="string" onChange={(e) => setProof(e.target.value)} />
+					<br />
+					<label>To address: </label>
+					<input placeholder="0x?????" type="string" onChange={(e) => setTo(e.target.value)} />
+					<br />
+					<label>Hours to be funded: </label>
+					<input placeholder="0" type="number" onChange={(e) => setHtf(e.target.value)} />
+					<br />
 					<button className={styles.button2} onClick={createProposal}>
 						Create
 					</button>
@@ -305,22 +335,16 @@ export default function Home() {
 	return (
 		<div>
 			<Head>
-				<title>CryptoDevs DAO</title>
-				<meta name="description" content="CryptoDevs DAO" />
+				<title>aidDAO</title>
+				<meta name="description" content="aidDAO" />
 				<link rel="icon" href="/favicon.ico" />
 			</Head>
 
 			<div className={styles.main}>
 				<div>
-					<h1 className={styles.title}>Welcome to Crypto Devs!</h1>
-					<div className={styles.description}>Welcome to the DAO!</div>
-					<div className={styles.description}>
-						Your CryptoDevs NFT Balance: {nftBalance}
-						<br />
-						Treasury Balance: {formatEther(treasuryBalance)} ETH
-						<br />
-						Total Number of Proposals: {numProposals}
-					</div>
+					<h1 className={styles.title}>aidDAO🆘</h1>
+					<div className={styles.description}>Welcome to aidDAO!</div>
+					<div className={styles.description}>Total Number of Proposals: {numProposals}</div>
 					<div className={styles.flex}>
 						<button className={styles.button} onClick={() => setSelectedTab('Create Proposal')}>
 							Create Proposal
@@ -328,15 +352,18 @@ export default function Home() {
 						<button className={styles.button} onClick={() => setSelectedTab('View Proposals')}>
 							View Proposals
 						</button>
+						<button className={styles.button} onClick={() => setSelectedTab('View Proposals')}>
+							Vote On Proposal
+						</button>
 					</div>
 					{renderTabs()}
 				</div>
 				<div>
-					<img className={styles.image} src="/cryptodevs/0.svg" />
+					<img className={styles.image} src="/aidDAO.jpg" />
 				</div>
 			</div>
 
-			<footer className={styles.footer}>Made with &#10084; by Crypto Devs</footer>
+			<footer className={styles.footer}>Made with &#10084; by aidDAO, at ETHOnline 2022</footer>
 		</div>
 	);
 }
