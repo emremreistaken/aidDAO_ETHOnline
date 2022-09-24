@@ -1,4 +1,4 @@
-export const AIDDAO_CONTRACT_ADDRESS = '0x89c20BB00Ce46750Ce02e546f8bB530BFE82826d';
+export const AIDDAO_CONTRACT_ADDRESS = '0xB1cD7bAdC2ECcCF8524d5Ff20b56fec51076FFc6';
 
 export const AIDDAO_ABI = [
 	{
@@ -359,6 +359,19 @@ export const AIDDAO_ABI = [
 		name: 'createAid',
 		outputs: [],
 		stateMutability: 'payable',
+		type: 'function'
+	},
+	{
+		inputs: [],
+		name: 'getActiveAidCount',
+		outputs: [
+			{
+				internalType: 'uint256',
+				name: '',
+				type: 'uint256'
+			}
+		],
+		stateMutability: 'view',
 		type: 'function'
 	},
 	{

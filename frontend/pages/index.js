@@ -1,5 +1,4 @@
-import { Contract, providers } from 'ethers';
-import { formatEther } from 'ethers/lib/utils';
+import { Contract, providers, utils } from 'ethers';
 import Head from 'next/head';
 import { useEffect, useRef, useState } from 'react';
 import Web3Modal from 'web3modal';
@@ -7,16 +6,12 @@ import { AIDDAO_ABI, AIDDAO_CONTRACT_ADDRESS } from '../constants';
 import styles from '../styles/Home.module.css';
 
 export default function Home() {
-	// ETH Balance of the DAO contract
-	const [ treasuryBalance, setTreasuryBalance ] = useState('0');
 	// Number of proposals created in the DAO
-	const [ numProposals, setNumProposals ] = useState('0');
+	const [ aidCounter, setAidCounter ] = useState('0');
 	// Array of all proposals created in the DAO
 	const [ proposals, setProposals ] = useState([]);
 	// User's balance of CryptoDevs NFTs
 	const [ isMember, setMember ] = useState('0');
-	// Fake NFT Token ID to purchase. Used when creating a proposal.
-	const [ fakeNftTokenId, setFakeNftTokenId ] = useState('');
 	// One of "Create Proposal" or "View Proposals"
 	const [ selectedTab, setSelectedTab ] = useState('');
 	// True if waiting for a transaction to be mined, false otherwise.
@@ -26,6 +21,8 @@ export default function Home() {
 	const [ proof, setProof ] = useState('');
 	const [ to, setTo ] = useState('');
 	const [ htf, setHtf ] = useState('0');
+	const [ activeCount, setActiveCount ] = useState('0');
+	const [ amountToFund, setAmountToFund ] = useState('0');
 	const [ indexToFund, setIndexToFund ] = useState('0');
 
 	const [ walletConnected, setWalletConnected ] = useState(false);
@@ -41,12 +38,12 @@ export default function Home() {
 		}
 	};
 
-	// Reads the ETH balance of the DAO contract and sets the `treasuryBalance` state variable
-	const getDAOTreasuryBalance = async () => {
+	const getActiveCount = async () => {
 		try {
 			const provider = await getProviderOrSigner();
-			const balance = await provider.getBalance(AIDDAO_CONTRACT_ADDRESS);
-			setTreasuryBalance(balance.toString());
+			const contract = getDaoContractInstance(provider);
+			const active = await contract.getActiveAidCount();
+			setActiveCount(active.toString());
 		} catch (error) {
 			console.error(error);
 		}
@@ -57,8 +54,8 @@ export default function Home() {
 		try {
 			const provider = await getProviderOrSigner();
 			const contract = getDaoContractInstance(provider);
-			const daoNumProposals = await contract.numProposals();
-			setNumProposals(daoNumProposals.toString());
+			const daoNumProposals = await contract.aidCounter();
+			setAidCounter(daoNumProposals.toString());
 		} catch (error) {
 			console.error(error);
 		}
@@ -81,30 +78,29 @@ export default function Home() {
 		try {
 			const signer = await getProviderOrSigner(true);
 			const daoContract = getDaoContractInstance(signer);
-			const txn = await daoContract.createProposal(to, description, proof, htf);
+			const txn = await daoContract.createAid(to, description, proof, htf);
 			setLoading(true);
 			await txn.wait();
+			await getActiveCount();
 			await getNumProposalsInDAO();
 			setLoading(false);
 		} catch (error) {
 			console.error(error);
-			window.alert(error.data.message);
 		}
 	};
 
 	// Calls the `createProposal` function in the contract, using the tokenId from `fakeNftTokenId`
-	const makeAid = async () => {
+	const makeAid = async (id, amount) => {
 		try {
 			const signer = await getProviderOrSigner(true);
 			const daoContract = getDaoContractInstance(signer);
-			const txn = await daoContract.joinToAid(indexToFund);
+			const txn = await daoContract.joinToAid(id, { value: utils.parseEther(amount) });
 			setLoading(true);
 			await txn.wait();
 			await getNumProposalsInDAO();
 			setLoading(false);
 		} catch (error) {
 			console.error(error);
-			window.alert(error.data.message);
 		}
 	};
 
@@ -115,13 +111,15 @@ export default function Home() {
 		try {
 			const provider = await getProviderOrSigner();
 			const daoContract = getDaoContractInstance(provider);
-			const proposal = await daoContract.proposals(id);
+			const proposal = await daoContract.aidProposals(id);
 			const parsedProposal = {
-				proposalId: id,
-				aidDesription: proposal.description,
+				aidId: id,
+				description: proposal.description,
 				deadline: new Date(parseInt(proposal.deadline.toString()) * 1000),
 				to: proposal.to.toString(),
-				executed: proposal.executed
+				totalAided: proposal.totalFunded.toString(),
+				executed: proposal.executed,
+				real: proposal.isNeedReal
 			};
 			return parsedProposal;
 		} catch (error) {
@@ -131,36 +129,19 @@ export default function Home() {
 
 	// Runs a loop `numProposals` times to fetch all proposals in the DAO
 	// and sets the `proposals` state variable
-	const fetchAllProposals = async () => {
+	const fetchActiveProposals = async () => {
 		try {
 			const proposals = [];
-			for (let i = 0; i < numProposals; i++) {
+			for (let i = 0; i < aidCounter; i++) {
 				const proposal = await fetchProposalById(i);
-				proposals.push(proposal);
+				if (proposal.real == true) {
+					proposals.push(proposal);
+				}
 			}
 			setProposals(proposals);
 			return proposals;
 		} catch (error) {
 			console.error(error);
-		}
-	};
-
-	// Calls the `voteOnProposal` function in the contract, using the passed
-	// proposal ID and Vote
-	const voteOnProposal = async (proposalId, _vote) => {
-		try {
-			const signer = await getProviderOrSigner(true);
-			const daoContract = getDaoContractInstance(signer);
-
-			let vote = _vote === 'YAY' ? 0 : 1;
-			const txn = await daoContract.voteOnProposal(proposalId, vote);
-			setLoading(true);
-			await txn.wait();
-			setLoading(false);
-			await fetchAllProposals();
-		} catch (error) {
-			console.error(error);
-			window.alert(error.data.message);
 		}
 	};
 
@@ -170,7 +151,7 @@ export default function Home() {
 		try {
 			const signer = await getProviderOrSigner(true);
 			const daoContract = getDaoContractInstance(signer);
-			const txn = await daoContract.executeProposal(proposalId);
+			const txn = await daoContract.sendAid(aidId);
 			setLoading(true);
 			await txn.wait();
 			setLoading(false);
@@ -220,7 +201,7 @@ export default function Home() {
 				});
 
 				connectWallet().then(() => {
-					getDAOTreasuryBalance();
+					getActiveCount();
 					getNumProposalsInDAO();
 				});
 			}
@@ -234,7 +215,7 @@ export default function Home() {
 	useEffect(
 		() => {
 			if (selectedTab === 'View Proposals') {
-				fetchAllProposals();
+				fetchActiveProposals();
 			}
 		},
 		[ selectedTab ]
@@ -268,7 +249,11 @@ export default function Home() {
 					<input placeholder="Description" type="string" onChange={(e) => setDescription(e.target.value)} />
 					<br />
 					<label>Proof for Description: </label>
-					<input placeholder="Proof" type="string" onChange={(e) => setProof(e.target.value)} />
+					<input
+						placeholder="Link for proof (e.g. https://blabla.com)"
+						type="string"
+						onChange={(e) => setProof(e.target.value)}
+					/>
 					<br />
 					<label>To address: </label>
 					<input placeholder="0x?????" type="string" onChange={(e) => setTo(e.target.value)} />
@@ -295,31 +280,40 @@ export default function Home() {
 				<div>
 					{proposals.map((p, index) => (
 						<div key={index} className={styles.proposalCard}>
-							<p>Proposal ID: {p.proposalId}</p>
-							<p>Fake NFT to Purchase: {p.nftTokenId}</p>
+							<p>Aid ID: {p.aidId}</p>
+							<p>Description: {p.description}</p>
 							<p>Deadline: {p.deadline.toLocaleString()}</p>
-							<p>Yay Votes: {p.yayVotes}</p>
-							<p>Nay Votes: {p.nayVotes}</p>
+							<p>Total Aided: {p.totalAided.toString()}</p>
 							<p>Executed?: {p.executed.toString()}</p>
 							{p.deadline.getTime() > Date.now() && !p.executed ? (
 								<div className={styles.flex}>
+									<label>Make Aid: </label>
+									<input
+										placeholder="Aid Amount in $MATIC"
+										type="number"
+										onChange={(e) => {
+											setAmountToFund(e.target.value);
+											setIndexToFund(p.aidId);
+										}}
+									/>
+									<br />
 									<button
 										className={styles.button2}
-										onClick={() => voteOnProposal(p.proposalId, 'YAY')}
+										onClick={() => makeAid(indexToFund, amountToFund)}
 									>
-										Vote YAY
-									</button>
-									<button
-										className={styles.button2}
-										onClick={() => voteOnProposal(p.proposalId, 'NAY')}
-									>
-										Vote NAY
+										Send Aid
 									</button>
 								</div>
 							) : p.deadline.getTime() < Date.now() && !p.executed ? (
 								<div className={styles.flex}>
-									<button className={styles.button2} onClick={() => executeProposal(p.proposalId)}>
-										Execute Proposal {p.yayVotes > p.nayVotes ? '(YAY)' : '(NAY)'}
+									<button
+										className={styles.button2}
+										onClick={() => {
+											setIndexToFund(p.aidId);
+											executeProposal(indexToFund);
+										}}
+									>
+										Execute Proposal
 									</button>
 								</div>
 							) : (
@@ -344,16 +338,14 @@ export default function Home() {
 				<div>
 					<h1 className={styles.title}>aidDAO🆘</h1>
 					<div className={styles.description}>Welcome to aidDAO!</div>
-					<div className={styles.description}>Total Number of Proposals: {numProposals}</div>
+					<div className={styles.description}>Active Aids: {activeCount}</div>
+					<div className={styles.description}>Aid Proposals Created So Far: {aidCounter}</div>
 					<div className={styles.flex}>
 						<button className={styles.button} onClick={() => setSelectedTab('Create Proposal')}>
-							Create Proposal
+							Create Aid Proposal
 						</button>
 						<button className={styles.button} onClick={() => setSelectedTab('View Proposals')}>
-							View Proposals
-						</button>
-						<button className={styles.button} onClick={() => setSelectedTab('View Proposals')}>
-							Vote On Proposal
+							View Proven Aids
 						</button>
 					</div>
 					{renderTabs()}

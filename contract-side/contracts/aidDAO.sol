@@ -241,4 +241,16 @@ contract aidDAO is ERC721A {
             )
         );
     }
+    
+    function getActiveAidCount() external view returns(uint) {
+        uint count;
+        for(uint i; i < aidCounter; i++){
+            Aid storage aid = aidProposals[i];
+            if(aid.isNeedReal == true && aid.executed == false) {
+                count++;
+            }
+        }
+        
+        return count;
+    }
 }
