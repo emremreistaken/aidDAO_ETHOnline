@@ -104,6 +104,20 @@ export default function Home() {
 		}
 	};
 
+	const joinDAO = async () => {
+		try {
+			const signer = await getProviderOrSigner(true);
+			const daoContract = getDaoContractInstance(signer);
+			const txn = await daoContract.joinDAO();
+			setLoading(true);
+			await txn.wait();
+			await getNumProposalsInDAO();
+			setLoading(false);
+		} catch (error) {
+			console.error(error);
+		}
+	};
+
 	// Helper function to fetch and parse one proposal from the DAO contract
 	// Given the Proposal ID
 	// and converts the returned data into a Javascript object with values we can use
@@ -227,8 +241,28 @@ export default function Home() {
 			return renderCreateProposalTab();
 		} else if (selectedTab === 'View Proposals') {
 			return renderViewProposalsTab();
+		} else if (selectedTab === 'Join aidDAO') {
+			return renderJoinDAOTab();
 		}
 		return null;
+	}
+
+	function renderJoinDAOTab() {
+		if (loading) {
+			return <div className={styles.description}>Loading... Waiting for transaction...</div>;
+		} else {
+			return (
+				<div className={styles.description}>
+					<br />
+					<br />
+					Welcome to the aidDAO! <br />
+					You can become a aidDAO Member by minting a cool Dynamic Soulbound NFT! <br />
+					<button className={styles.button2} onClick={joinDAO}>
+						Become a member
+					</button>
+				</div>
+			);
+		}
 	}
 
 	// Renders the 'Create Proposal' tab content
@@ -341,6 +375,9 @@ export default function Home() {
 					<div className={styles.description}>Active Aids: {activeCount}</div>
 					<div className={styles.description}>Aid Proposals Created So Far: {aidCounter}</div>
 					<div className={styles.flex}>
+						<button className={styles.button} onClick={() => setSelectedTab('Join aidDAO')}>
+							Join DAO
+						</button>
 						<button className={styles.button} onClick={() => setSelectedTab('Create Proposal')}>
 							Create Aid Proposal
 						</button>
