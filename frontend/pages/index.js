@@ -253,8 +253,6 @@ export default function Home() {
 		} else {
 			return (
 				<div className={styles.description}>
-					<br />
-					<br />
 					Welcome to the aidDAO! <br />
 					<br />
 					You can become a member by minting "aidDAO Membership NFT"
