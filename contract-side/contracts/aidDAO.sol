@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 
 import { Base64 } from "./libraries/Base64.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "erc721a/contracts/ERC721A.sol";
 import "./OptimisticOracleInterface.sol";
 
@@ -11,6 +12,8 @@ interface IPUSHCommInterface {
 }
 
 contract aidDAO is ERC721A {
+    using Strings for uint256;
+
     mapping(address => uint) public addressParticipated; // keeps track of total participation amount of addresses
     mapping(address => uint) public addressFunded; // keeps track of total aided $MATIC amounts of addresses
     mapping(uint256 => Aid) public aidProposals;
@@ -118,15 +121,15 @@ contract aidDAO is ERC721A {
 
     /******************** DYNAMIC SOULBOUND NFT ********************/
 
-    string svg1 = "<svg xmlns='http://www.w3.org/2000/svg' version='1.1' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:svgjs='http://svgjs.dev/svgjs' viewBox='0 0 700 700' width='700' height='700'><defs><linearGradient gradientTransform='rotate(150, 0.5, 0.5)' x1='50%' y1='0%' x2='50%' y2='100%' id='ffflux-gradient'><style>.t{ font: bold 30px sans-serif; fill: black; }.b{ font: bold 50px sans-serif; fill: black; }.f{ font: bold 50px monospace; fill: black; }</style><stop stop-color='hsl(315, 100%, 72%)' stop-opacity='1' offset='0%'></stop><stop stop-color='hsl(227, 100%, 50%)' stop-opacity='1' offset='100%'></stop></linearGradient><filter id='ffflux-filter' x='-20%' y='-20%' width='140%' height='140%' filterUnits='objectBoundingBox' primitiveUnits='userSpaceOnUse' color-interpolation-filters='sRGB'><feTurbulence type='fractalNoise' baseFrequency='0.005 0.003' numOctaves='2' seed='2' stitchTiles='stitch' x='0%' y='0%' width='100%' height='100%' result='turbulence'></feTurbulence><feGaussianBlur stdDeviation='20 0' x='0%' y='0%' width='100%' height='100%' in='turbulence' edgeMode='duplicate' result='blur'></feGaussianBlur><feBlend mode='color-dodge' x='0%' y='0%' width='100%' height='100%' in='SourceGraphic' in2='blur' result='blend'></feBlend></filter></defs><rect width='700' height='700' fill='url(#ffflux-gradient)' filter='url(#ffflux-filter)'></rect><text x='50%' y='25%' class='t' dominant-baseline='middle' text-anchor='middle'>Participated aid amount:</text><text x='50%' y='35%' class='b' dominant-baseline='middle' text-anchor='middle'>";
-    string svg2 = "</text><text x='50%' y='60%' class='t' dominant-baseline='middle' text-anchor='middle'>Raised aid amount in $MATIC:</text><text x='50%' y='70%' class='b' dominant-baseline='middle'>";
+    string svg1 = "<svg xmlns='http://www.w3.org/2000/svg' version='1.1' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:svgjs='http://svgjs.dev/svgjs' viewBox='0 0 700 700' width='700' height='700'><defs><linearGradient gradientTransform='rotate(150, 0.5, 0.5)' x1='50%' y1='0%' x2='50%' y2='100%' id='ffflux-gradient'><style>.t{ font: bold 30px sans-serif; fill: black; }.b{ font: bold 50px sans-serif; fill: black; }.f{ font: bold 50px monospace; fill: black; }.a{ font: bold 25px sans-serif; fill: black; }</style><stop stop-color='hsl(315, 100%, 72%)' stop-opacity='1' offset='0%'></stop><stop stop-color='hsl(227, 100%, 50%)' stop-opacity='1' offset='100%'></stop></linearGradient><filter id='ffflux-filter' x='-20%' y='-20%' width='140%' height='140%' filterUnits='objectBoundingBox' primitiveUnits='userSpaceOnUse' color-interpolation-filters='sRGB'><feTurbulence type='fractalNoise' baseFrequency='0.005 0.003' numOctaves='2' seed='2' stitchTiles='stitch' x='0%' y='0%' width='100%' height='100%' result='turbulence'></feTurbulence><feGaussianBlur stdDeviation='20 0' x='0%' y='0%' width='100%' height='100%' in='turbulence' edgeMode='duplicate' result='blur'></feGaussianBlur><feBlend mode='color-dodge' x='0%' y='0%' width='100%' height='100%' in='SourceGraphic' in2='blur' result='blend'></feBlend></filter></defs><rect width='700' height='700' fill='url(#ffflux-gradient)' filter='url(#ffflux-filter)'></rect><text x='50%' y='25%' class='t' dominant-baseline='middle' text-anchor='middle'>Participated aid amount:</text><text x='50%' y='35%' class='b' dominant-baseline='middle' text-anchor='middle'>";
+    string svg2 = "</text><text x='50%' y='60%' class='t' dominant-baseline='middle' text-anchor='middle'>Raised aid amount in $MATIC wei:</text><text x='50%' y='70%' class='a' dominant-baseline='middle'>";
     string svg3 = "</text><text x='456' y='95%' class='f' dominant-baseline='middle'>aidDAO&#127384;</text></svg>";
 
     function tokenURI(uint tokenId) public view virtual override returns(string memory) {
         uint participated = addressParticipated[ownerOf(tokenId)];
         uint raised = addressFunded[ownerOf(tokenId)];
 
-        string memory finalSvg = string(abi.encodePacked(svg1, _toString(participated), svg2, _toString(raised/(10**18)), svg3));
+        string memory finalSvg = string(abi.encodePacked(svg1, _toString(participated), svg2, raised.toString() , svg3));
 
         string memory json = Base64.encode(
             bytes(

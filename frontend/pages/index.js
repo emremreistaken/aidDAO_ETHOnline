@@ -231,6 +231,7 @@ export default function Home() {
 			if (selectedTab === 'View Proposals') {
 				fetchActiveProposals();
 			}
+			getNumProposalsInDAO();
 		},
 		[ selectedTab ]
 	);
@@ -320,7 +321,7 @@ export default function Home() {
 							<p>Aid ID: {p.aidId}</p>
 							<p>Description: {p.description}</p>
 							<p>Deadline: {p.deadline.toLocaleString()}</p>
-							<p>Total Aided: {p.totalAided.toString()}</p>
+							<p>Total Aided: {(p.totalAided / 10 ** 18).toFixed(2).toString()} $MATIC</p>
 							<p>Executed?: {p.executed.toString()}</p>
 							{p.deadline.getTime() > Date.now() && !p.executed ? (
 								<div className={styles.flex}>
