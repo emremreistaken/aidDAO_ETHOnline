@@ -11,21 +11,22 @@ interface IPUSHCommInterface {
 }
 
 contract aidDAO is ERC721A {
-    mapping(address => uint) public addressParticipated;
-    mapping(address => uint) public addressFunded;
+    mapping(address => uint) public addressParticipated; // keeps track of total participation amount of addresses
+    mapping(address => uint) public addressFunded; // keeps track of total aided $MATIC amounts of addresses
     mapping(uint256 => Aid) public aidProposals;
 
     struct Aid {
         uint deadline;
-        bool executed;
+        bool executed; // keeps track of whether the aid is sent or not
         mapping(address => uint) aiders;
 
         string description;
-        bytes OOquestion;
-        address to;
-        uint requestTime;
+        string proof; // to ask UMA's OO about legidity of description source
+        address to; // destination to fund
+        bytes OOquestion; // to get the answer from UMA'ss OOV2
+        uint requestTime; // to get the answer from UMA'ss OOV2
 
-        bool isNeedReal;
+        bool isNeedReal; // if yes, it's ready to be funded
         uint totalFunded;
     }
 
@@ -43,12 +44,14 @@ contract aidDAO is ERC721A {
     function createAid(
         address _to,
         string memory _description,
+        string memory _proof,
         uint _hoursToFund
     ) external payable DAOMemberOnly {
         Aid storage aid = aidProposals[aidCounter];
 
         aid.description = _description;
-        aid.OOquestion = bytes(abi.encodePacked("For aidDAO, is the following statement an urgent emergency?: ", _description, " A: 1 for true, 0 for not true"));
+        aid.proof = _proof;
+        aid.OOquestion = bytes(abi.encodePacked("Is the following news source 'legit and an urgent emergency' at the same time?: ", _proof, " A: 1 for YES, 0 for NO"));
         aid.to = _to;
         aid.deadline = block.timestamp + _hoursToFund * 60; // should be " * 3600" at the end, but lowered for testing purposes
 
