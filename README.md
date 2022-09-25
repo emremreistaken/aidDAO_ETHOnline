@@ -1,4 +1,4 @@
-<h1>aidDAO</h1>
+<h1>aidDAO (Created at ETHOnline 2022)</h1>
 
 <h1>Project Description</h1>
 During emergencies like disaster and rapid crisis times, it is hard to coordinate effectively as individuals to deliver help to people in need. Bureaucracies, verifiaction problems and high costs of international transfers are some reasons behind this.
