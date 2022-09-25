@@ -260,6 +260,14 @@ export default function Home() {
 					<button className={styles.button2} onClick={joinDAO}>
 						Become a member
 					</button>
+					<br />
+					<br />
+					Please opt-in to aidDAO EPNS channel to receive push notifications!
+					<br />
+					<br />
+					<a href="https://staging.epns.io/#/channels" target="_blank">
+						Click here to opt-in
+					</a>
 				</div>
 			);
 		}
