@@ -22,6 +22,7 @@ export default function Home() {
 	const [ activeCount, setActiveCount ] = useState('0');
 	const [ amountToFund, setAmountToFund ] = useState('0');
 	const [ indexToFund, setIndexToFund ] = useState('0');
+	const [ isMember, setMember ] = useState('0');
 
 	const [ walletConnected, setWalletConnected ] = useState(false);
 	const web3ModalRef = useRef();
@@ -54,6 +55,17 @@ export default function Home() {
 			const contract = getDaoContractInstance(provider);
 			const daoNumProposals = await contract.aidCounter();
 			setAidCounter(daoNumProposals.toString());
+		} catch (error) {
+			console.error(error);
+		}
+	};
+
+	const checkIfMember = async () => {
+		try {
+			const signer = await getProviderOrSigner(true);
+			const daoContract = getDaoContractInstance(signer);
+			const balance = await daoContract.balanceOf(signer.getAddress());
+			setMember(parseInt(balance.toString()));
 		} catch (error) {
 			console.error(error);
 		}
